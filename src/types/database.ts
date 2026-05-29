@@ -1,3 +1,5 @@
+import type { Generated } from "kysely";
+
 export interface GuildSettingsTable {
   guild_id: string;
   log_channel_id: string | null;
@@ -10,7 +12,7 @@ export interface HoneypotChannelsTable {
   guild_id: string;
   channel_id: string;
   added_by: string;
-  added_at: Date;
+  added_at: Generated<Date>;
   action: string | null;
   delete_message_seconds: number | null;
   exempt_admins: boolean | null;
@@ -35,7 +37,7 @@ export interface HoneypotHitsTable {
   channel_id: string;
   message_content: string | null;
   action_taken: string;
-  hit_at: Date;
+  added_at: Generated<Date>;
 }
 
 export interface Database {

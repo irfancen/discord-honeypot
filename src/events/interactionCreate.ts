@@ -1,4 +1,4 @@
-import { Events, MessageFlags } from "discord.js";
+import { Events, MessageFlags, type InteractionReplyOptions } from "discord.js";
 import type { Event } from "../types/event.js";
 
 const event: Event<typeof Events.InteractionCreate> = {
@@ -17,7 +17,7 @@ const event: Event<typeof Events.InteractionCreate> = {
     } catch (error) {
       console.error(`Error executing /${interaction.commandName}:`, error);
 
-      const errorReply = {
+      const errorReply: InteractionReplyOptions = {
         content: "Something went wrong while running this command.",
         flags: MessageFlags.Ephemeral,
       };
