@@ -21,3 +21,7 @@ npm-debug.log*
 
 # typescript cache
 *.tsbuildinfo
+
+# internal working docs
+/docs/
+/CLAUDE.md
