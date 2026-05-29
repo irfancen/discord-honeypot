@@ -1,7 +1,10 @@
 import { readdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { BotClient } from "../types/client.js";
 import type { Event } from "../types/event.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function loadEvents(client: BotClient): Promise<void> {
   const eventsPath = join(__dirname, "..", "events");

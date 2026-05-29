@@ -1,8 +1,11 @@
 import { REST, Routes } from "discord.js";
 import { readdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "../config.js";
 import type { Command } from "../types/command.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function deploy() {
   const commands: unknown[] = [];

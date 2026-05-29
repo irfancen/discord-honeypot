@@ -1,7 +1,10 @@
 import { readdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { BotClient } from "../types/client.js";
 import type { Command } from "../types/command.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function loadCommands(client: BotClient): Promise<void> {
   const commandsPath = join(__dirname, "..", "commands");

@@ -12,4 +12,5 @@ export const config = {
   token: required("DISCORD_TOKEN"),
   clientId: required("CLIENT_ID"),
   guildId: required("GUILD_ID"),
+  databaseUrl: required("DATABASE_URL"),
 } as const;
