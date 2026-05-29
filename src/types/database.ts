@@ -37,7 +37,7 @@ export interface HoneypotHitsTable {
   channel_id: string;
   message_content: string | null;
   action_taken: string;
-  added_at: Generated<Date>;
+  hit_at: Generated<Date>;
 }
 
 export interface Database {
