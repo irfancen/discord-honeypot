@@ -81,6 +81,11 @@ export const data = new SlashCommandBuilder()
     sub
       .setName("list")
       .setDescription("List all honeypot channels and their resolved settings")
+      .addBooleanOption((o) =>
+        o
+          .setName("visible")
+          .setDescription("Post for other admins to see (default: only you; reveals honeypot channels)")
+      )
   );
 
 export async function execute(
@@ -208,9 +213,10 @@ async function handleList(
     .setColor(0xf1c40f)
     .setDescription(description.slice(0, 4096));
 
+  const visible = interaction.options.getBoolean("visible") ?? false;
   await interaction.reply({
     embeds: [embed],
-    flags: MessageFlags.Ephemeral,
+    flags: visible ? undefined : MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
 }

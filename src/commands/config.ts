@@ -43,7 +43,14 @@ export const data = new SlashCommandBuilder()
   .setDescription("Configure server-wide honeypot settings")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .addSubcommand((sub) =>
-    sub.setName("show").setDescription("Show the current server configuration")
+    sub
+      .setName("show")
+      .setDescription("Show the current server configuration")
+      .addBooleanOption((o) =>
+        o
+          .setName("visible")
+          .setDescription("Post for other admins to see (default: only you)")
+      )
   )
   .addSubcommand((sub) =>
     sub
@@ -142,9 +149,10 @@ async function handleShow(
       { name: "Default settings", value: formatDefaults(settings) }
     );
 
+  const visible = interaction.options.getBoolean("visible") ?? false;
   await interaction.reply({
     embeds: [embed],
-    flags: MessageFlags.Ephemeral,
+    flags: visible ? undefined : MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
 }
