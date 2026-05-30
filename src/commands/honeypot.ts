@@ -18,20 +18,20 @@ import {
 import { parseAction } from "../utils/validation.js";
 import { formatRoleList, humanizeSeconds, prettify } from "../utils/format.js";
 import {
+  INHERIT,
+  NONE,
+  SET,
+  BYPASS_HELP,
+  readChoice,
+  parseRoleMentions,
+  presetChoices,
+  inheritChoice,
+} from "../lib/commandOptions.js";
+import {
   honeypotChannelService,
   type BypassRolesUpdate,
   type HoneypotOverrides,
 } from "../services/honeypotChannelService.js";
-
-// The choice value that maps a setting back to NULL (inherit the next level).
-const INHERIT = "inherit";
-// bypass_roles dropdown values.
-const NONE = "none";
-const SET = "set";
-
-const BYPASS_HELP =
-  "To set bypass roles, choose `Set to roles below` and `@`-mention at least " +
-  "one role in the `roles` option.";
 
 export const data = new SlashCommandBuilder()
   .setName("honeypot")
@@ -272,16 +272,6 @@ function withSettingOptions(
     );
 }
 
-function presetChoices(
-  presets: Record<string, number>
-): { name: string; value: string }[] {
-  return Object.keys(presets).map((key) => ({ name: prettify(key), value: key }));
-}
-
-function inheritChoice(): { name: string; value: string } {
-  return { name: "Inherit (guild default)", value: INHERIT };
-}
-
 // ── option parsing ─────────────────────────────────────────────────
 
 function readOverrides(
@@ -301,22 +291,6 @@ function readOverrides(
     ),
     exemptAdmins: readChoice(interaction, "exempt_admins", (v) => v === "true"),
   };
-}
-
-/**
- * Translate a setting option into the three-state override convention:
- * absent → undefined (leave unchanged), "inherit" → null (clear), else the
- * transformed value.
- */
-function readChoice<T>(
-  interaction: ChatInputCommandInteraction,
-  name: string,
-  transform: (value: string) => T
-): T | null | undefined {
-  const raw = interaction.options.getString(name);
-  if (raw === null) return undefined;
-  if (raw === INHERIT) return null;
-  return transform(raw);
 }
 
 /**
@@ -341,18 +315,6 @@ function readBypassRoles(
   }
 
   return undefined; // nothing provided → leave unchanged
-}
-
-/** Extract unique role IDs from `<@&id>` mentions in free text. */
-function parseRoleMentions(text: string): string[] {
-  const ids = new Set<string>();
-  const pattern = /<@&(\d+)>/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    const id = match[1];
-    if (id) ids.add(id);
-  }
-  return [...ids];
 }
 
 // ── display ────────────────────────────────────────────────────────
