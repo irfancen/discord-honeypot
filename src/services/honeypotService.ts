@@ -16,6 +16,13 @@ const FETCH_PAGE_SIZE = 100;
 // Discord's 500-channel ceiling doesn't run strictly serially (~1-2 min), while
 // not bursting all 500 at once (discord.js queues rate limits regardless).
 const PURGE_CONCURRENCY = 10;
+// Perms the bot needs in a channel to purge it; channels lacking any are skipped
+// up front (no point firing a fetch that 401s on a channel we can't read/delete).
+const PURGE_PERMS = [
+  PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.ReadMessageHistory,
+  PermissionFlagsBits.ManageMessages,
+];
 import { honeypotChannelRepository } from "../database/repositories/honeypotChannelRepository.js";
 import { honeypotHitRepository } from "../database/repositories/honeypotHitRepository.js";
 import { settingsService } from "./settingsService.js";
@@ -58,7 +65,22 @@ export const honeypotService = {
       "name" in message.channel ? message.channel.name : channelId
     }`;
     const actioned = await executeAction(member, resolved, reason);
-    if (!actioned) return;
+    if (!actioned) {
+      // Couldn't action (e.g. a hacked account that outranks the bot) — the spam
+      // is already deleted, but a human needs to step in, so alert the log channel.
+      await hitNotificationService.postActionFailed(
+        message.client,
+        {
+          guildId,
+          userId: member.id,
+          channelId,
+          attemptedAction: resolved.action.kind,
+          messageContent,
+        },
+        attachmentNames
+      );
+      return;
+    }
 
     const hitId = await honeypotHitRepository.create({
       guildId,
@@ -184,9 +206,14 @@ async function purgeRecentMessages(
   const windowSeconds = Math.min(seconds, BULK_DELETE_MAX_AGE_SECONDS);
   const cutoff = Date.now() - windowSeconds * 1000;
 
+  // Only channels the bot can actually read and delete in — skip the rest
+  // silently rather than firing fetches that fail with Missing Access.
+  const me = guild.members.me;
   const channels = [
     ...guild.channels.cache.filter((channel) => channel.isTextBased()).values(),
-  ];
+  ].filter(
+    (channel) => me === null || channel.permissionsFor(me)?.has(PURGE_PERMS) === true
+  );
 
   for (let i = 0; i < channels.length; i += PURGE_CONCURRENCY) {
     const batch = channels.slice(i, i + PURGE_CONCURRENCY);
