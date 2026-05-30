@@ -33,6 +33,13 @@ export const settingsService = {
       guildSettingsRepository.find(guildId),
     ]);
 
+    return settingsService.resolve(channelSettings, guildSettings);
+  },
+
+  resolve(
+    channelSettings: HoneypotChannel | null,
+    guildSettings: GuildSettings | null
+  ): ResolvedChannelSettings {
     const action = resolveScalar(
       channelSettings?.action ?? null,
       guildSettings?.defaultAction ?? null,

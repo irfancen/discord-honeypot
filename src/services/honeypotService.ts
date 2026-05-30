@@ -12,6 +12,10 @@ import {
 
 const BULK_DELETE_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 const FETCH_PAGE_SIZE = 100;
+// Channels are purged in parallel batches of this size. Bounded so a guild near
+// Discord's 500-channel ceiling doesn't run strictly serially (~1-2 min), while
+// not bursting all 500 at once (discord.js queues rate limits regardless).
+const PURGE_CONCURRENCY = 10;
 import { honeypotChannelRepository } from "../database/repositories/honeypotChannelRepository.js";
 import { honeypotHitRepository } from "../database/repositories/honeypotHitRepository.js";
 import { settingsService } from "./settingsService.js";
@@ -180,24 +184,29 @@ async function purgeRecentMessages(
   const windowSeconds = Math.min(seconds, BULK_DELETE_MAX_AGE_SECONDS);
   const cutoff = Date.now() - windowSeconds * 1000;
 
-  const textChannels = guild.channels.cache.filter((channel) =>
-    channel.isTextBased()
-  );
+  const channels = [
+    ...guild.channels.cache.filter((channel) => channel.isTextBased()).values(),
+  ];
 
-  for (const channel of textChannels.values()) {
-    try {
-      const recent = await channel.messages.fetch({ limit: FETCH_PAGE_SIZE });
-      const offenders = recent.filter(
-        (m) => m.author.id === userId && m.createdTimestamp >= cutoff
-      );
-      if (offenders.size > 0) {
-        await channel.bulkDelete(offenders, true);
-      }
-    } catch (error) {
-      console.warn(
-        `[honeypot] Purge skipped channel ${channel.id} in guild ${guild.id}:`,
-        error
-      );
-    }
+  for (let i = 0; i < channels.length; i += PURGE_CONCURRENCY) {
+    const batch = channels.slice(i, i + PURGE_CONCURRENCY);
+    await Promise.all(
+      batch.map(async (channel) => {
+        try {
+          const recent = await channel.messages.fetch({ limit: FETCH_PAGE_SIZE });
+          const offenders = recent.filter(
+            (m) => m.author.id === userId && m.createdTimestamp >= cutoff
+          );
+          if (offenders.size > 0) {
+            await channel.bulkDelete(offenders, true);
+          }
+        } catch (error) {
+          console.warn(
+            `[honeypot] Purge skipped channel ${channel.id} in guild ${guild.id}:`,
+            error
+          );
+        }
+      })
+    );
   }
 }
