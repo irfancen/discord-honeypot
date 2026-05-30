@@ -25,3 +25,4 @@ npm-debug.log*
 # internal working docs
 /docs/
 /CLAUDE.md
+/.claude

@@ -10,6 +10,7 @@ interface HoneypotChannelRow {
   added_at: Date;
   action: string | null;
   delete_message_seconds: number | null;
+  timeout_seconds: number | null;
   exempt_admins: boolean | null;
   bypass_roles_overridden: boolean;
 }
@@ -22,6 +23,7 @@ function toDomain(row: HoneypotChannelRow, bypassRoleIds: string[]): HoneypotCha
     addedAt: row.added_at,
     action: parseActionOrNull(row.action),
     deleteMessageSeconds: row.delete_message_seconds,
+    timeoutSeconds: row.timeout_seconds,
     exemptAdmins: row.exempt_admins,
     bypassRolesOverridden: row.bypass_roles_overridden,
     bypassRoleIds,
@@ -100,6 +102,7 @@ export const honeypotChannelRepository = {
     addedBy: string;
     action?: Action | null;
     deleteMessageSeconds?: number | null;
+    timeoutSeconds?: number | null;
     exemptAdmins?: boolean | null;
   }): Promise<void> {
     await db
@@ -110,6 +113,7 @@ export const honeypotChannelRepository = {
         added_by: channel.addedBy,
         action: channel.action ?? null,
         delete_message_seconds: channel.deleteMessageSeconds ?? null,
+        timeout_seconds: channel.timeoutSeconds ?? null,
         exempt_admins: channel.exemptAdmins ?? null,
         bypass_roles_overridden: false,
       })
@@ -134,12 +138,14 @@ export const honeypotChannelRepository = {
     changes: {
       action?: Action | null;
       deleteMessageSeconds?: number | null;
+      timeoutSeconds?: number | null;
       exemptAdmins?: boolean | null;
     }
   ): Promise<void> {
     const updateValues = buildUpdate(changes, {
       action: "action",
       deleteMessageSeconds: "delete_message_seconds",
+      timeoutSeconds: "timeout_seconds",
       exemptAdmins: "exempt_admins",
     });
 

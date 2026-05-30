@@ -5,6 +5,7 @@ export interface GuildSettingsTable {
   log_channel_id: string | null;
   default_action: string | null;
   default_delete_message_seconds: number | null;
+  default_timeout_seconds: number | null;
   default_exempt_admins: boolean | null;
 }
 
@@ -15,6 +16,7 @@ export interface HoneypotChannelsTable {
   added_at: Generated<Date>;
   action: string | null;
   delete_message_seconds: number | null;
+  timeout_seconds: number | null;
   exempt_admins: boolean | null;
   bypass_roles_overridden: boolean;
 }

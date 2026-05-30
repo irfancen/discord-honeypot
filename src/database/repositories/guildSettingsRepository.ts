@@ -8,6 +8,7 @@ interface GuildSettingsRow {
   log_channel_id: string | null;
   default_action: string | null;
   default_delete_message_seconds: number | null;
+  default_timeout_seconds: number | null;
   default_exempt_admins: boolean | null;
 }
 
@@ -17,6 +18,7 @@ function toDomain(row: GuildSettingsRow, bypassRoleIds: string[]): GuildSettings
     logChannelId: row.log_channel_id,
     defaultAction: parseActionOrNull(row.default_action),
     defaultDeleteMessageSeconds: row.default_delete_message_seconds,
+    defaultTimeoutSeconds: row.default_timeout_seconds,
     defaultExemptAdmins: row.default_exempt_admins,
     defaultBypassRoleIds: bypassRoleIds,
   };
@@ -49,6 +51,7 @@ export const guildSettingsRepository = {
         log_channel_id: null,
         default_action: null,
         default_delete_message_seconds: null,
+        default_timeout_seconds: null,
         default_exempt_admins: null,
       })
       .onConflict((oc) => oc.column("guild_id").doNothing())
@@ -67,6 +70,7 @@ export const guildSettingsRepository = {
       logChannelId?: string | null;
       defaultAction?: Action | null;
       defaultDeleteMessageSeconds?: number | null;
+      defaultTimeoutSeconds?: number | null;
       defaultExemptAdmins?: boolean | null;
     }
   ): Promise<void> {
@@ -74,6 +78,7 @@ export const guildSettingsRepository = {
       logChannelId: "log_channel_id",
       defaultAction: "default_action",
       defaultDeleteMessageSeconds: "default_delete_message_seconds",
+      defaultTimeoutSeconds: "default_timeout_seconds",
       defaultExemptAdmins: "default_exempt_admins",
     });
 
