@@ -30,12 +30,16 @@ async function deploy() {
 
   const rest = new REST().setToken(config.token);
 
-  console.log(`\nRegistering ${commands.length} command(s) with Discord...`);
+  const route = config.guildId
+    ? Routes.applicationGuildCommands(config.clientId, config.guildId)
+    : Routes.applicationCommands(config.clientId);
+  const scope = config.guildId
+    ? `guild ${config.guildId} (instant)`
+    : "globally (all guilds; ~1h to propagate)";
 
-  const data = (await rest.put(
-    Routes.applicationGuildCommands(config.clientId, config.guildId),
-    { body: commands }
-  )) as unknown[];
+  console.log(`\nRegistering ${commands.length} command(s) ${scope}...`);
+
+  const data = (await rest.put(route, { body: commands })) as unknown[];
 
   console.log(`Successfully registered ${data.length} command(s).`);
 }
