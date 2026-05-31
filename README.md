@@ -8,10 +8,6 @@ against the attacker. You designate one or more **honeypot channels** — channe
 a real member would never post in — and any account that posts there is
 automatically removed before it can spam the rest of your server.
 
-> **Status:** In active development. The data layer and command framework are
-> built; the honeypot detection and configuration commands are in progress. See
-> [Roadmap](#roadmap).
-
 ## How it works
 
 1. An admin marks a channel as a honeypot (e.g. a hidden `#do-not-post` channel,
@@ -80,25 +76,50 @@ npm run dev        # start the bot
 
 ## Usage
 
-> Configuration commands are under development. Planned interface:
-
 ```
-/honeypot add <channel> [action] [delete_messages]   Designate a honeypot
-/honeypot remove <channel>                            Remove one
-/honeypot list                                        Show all honeypots
-/config logchannel <channel>                          Set the audit log channel
-/config defaults [action] [delete_messages]           Set server-wide defaults
+/honeypot add <channel> [options]      Designate a honeypot
+/honeypot remove <channel>             Remove one
+/honeypot list                         Show all honeypots + resolved settings
+/honeypot config <channel> [options]   Override settings for one honeypot
+/config show                           Show server defaults + log channel
+/config logchannel <channel>           Set the audit log channel
+/config defaults [options]             Set server-wide defaults (with impact confirmation)
+/diagnose                              Check the bot's permissions, server- and channel-wide
 ```
 
-## Roadmap
+`[options]` covers `action`, `delete_messages`, `timeout`, `bypass_roles`, and
+`roles`. Each scalar setting includes an **Inherit (guild default)** choice, and
+the bot confirms the resolved value and where it came from.
 
-- [x] Project scaffolding & command/event framework
-- [x] Database schema, migrations, and data access
-- [ ] Settings resolution (per-channel → server → defaults)
-- [ ] Honeypot detection and action execution
-- [ ] `/honeypot` and `/config` commands
-- [ ] Audit log notifications
+## Deployment
 
-## License
+Production runs on a single box with Docker Compose: the bot plus a Postgres
+container. The `Dockerfile` is multi-stage (builds TypeScript, then a slim
+runtime image running as a non-root user); `docker-compose.yml` wires the bot to
+a `db` service with a healthcheck.
 
-MIT
+Compose reads a `.env` next to `docker-compose.yml`:
+
+| Var | Required | Notes |
+|-----|----------|-------|
+| `DISCORD_TOKEN` | yes | Bot token |
+| `CLIENT_ID` | yes | Application ID (for command registration) |
+| `GUILD_ID` | no | set → register commands to one guild (instant); omit → register globally (all guilds, ~1h to propagate) |
+| `POSTGRES_PASSWORD` | yes | Postgres password |
+| `POSTGRES_USER` | no | default `honeypot` |
+| `POSTGRES_DB` | no | default `honeypot` |
+| `LOG_LEVEL` | no | pino level, default `info` |
+
+Migrations run separately, never on boot. First deploy:
+
+```bash
+docker compose build                                              # build the bot image locally...
+docker compose pull bot                                           # ...OR pull the CI-published image (same tag)
+docker compose up -d db                                           # wait for healthy
+docker compose run --rm bot node dist/scripts/migrate.js          # apply migrations
+docker compose run --rm bot node dist/scripts/deploy-commands.js  # register commands
+docker compose up -d bot                                          # start the bot
+```
+
+The first two commands are alternatives — `build` compiles the image locally,
+`pull bot` fetches the published `irfancen/discord-honeypot` image. Run one.

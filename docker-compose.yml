@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-honeypot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-honeypot}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-honeypot} -d ${POSTGRES_DB:-honeypot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    image: irfancen/discord-honeypot
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN in .env}
+      CLIENT_ID: ${CLIENT_ID:?set CLIENT_ID in .env}
+      GUILD_ID: ${GUILD_ID:-}
+      DATABASE_URL: postgres://${POSTGRES_USER:-honeypot}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-honeypot}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+volumes:
+  pgdata:
