@@ -5,45 +5,11 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type Guild,
-  type GuildBasedChannel,
   type GuildMember,
 } from "discord.js";
 import { guildSettingsService } from "../services/guildSettingsService.js";
 import { honeypotChannelService } from "../services/honeypotChannelService.js";
-
-interface Perm {
-  flag: bigint;
-  name: string;
-  why: string;
-}
-
-// Everything the bot needs, with a plain-language reason for each.
-const SERVER_PERMS: Perm[] = [
-  { flag: PermissionFlagsBits.ViewChannel, name: "View Channels", why: "see honeypot channels" },
-  { flag: PermissionFlagsBits.SendMessages, name: "Send Messages", why: "post to the log channel" },
-  { flag: PermissionFlagsBits.EmbedLinks, name: "Embed Links", why: "send hit-notification embeds" },
-  { flag: PermissionFlagsBits.ManageMessages, name: "Manage Messages", why: "delete spam messages" },
-  { flag: PermissionFlagsBits.ReadMessageHistory, name: "Read Message History", why: "purge recent spam" },
-  { flag: PermissionFlagsBits.BanMembers, name: "Ban Members", why: "ban action" },
-  { flag: PermissionFlagsBits.KickMembers, name: "Kick Members", why: "kick action" },
-  { flag: PermissionFlagsBits.ModerateMembers, name: "Moderate Members", why: "timeout action" },
-];
-
-// Channel-level perms that matter where the bot actually works.
-const LOG_CHANNEL_PERMS: Perm[] = SERVER_PERMS.filter((p) =>
-  [
-    PermissionFlagsBits.ViewChannel,
-    PermissionFlagsBits.SendMessages,
-    PermissionFlagsBits.EmbedLinks,
-  ].includes(p.flag)
-);
-const HONEYPOT_CHANNEL_PERMS: Perm[] = SERVER_PERMS.filter((p) =>
-  [
-    PermissionFlagsBits.ViewChannel,
-    PermissionFlagsBits.ManageMessages,
-    PermissionFlagsBits.ReadMessageHistory,
-  ].includes(p.flag)
-);
+import { diagnosticsService } from "../services/diagnosticsService.js";
 
 const MAX_LISTED = 15;
 
@@ -73,10 +39,11 @@ export async function execute(
   const guildId = guild.id;
 
   // ── server-wide permissions ──
-  const serverLines = SERVER_PERMS.map((p) =>
-    me.permissions.has(p.flag) ? `✅ ${p.name}` : `❌ ${p.name} — ${p.why}`
+  const statuses = diagnosticsService.serverPermStatuses(me.permissions);
+  const serverLines = statuses.map((s) =>
+    s.ok ? `✅ ${s.name}` : `❌ ${s.name} — ${s.why}`
   );
-  const serverOk = SERVER_PERMS.every((p) => me.permissions.has(p.flag));
+  const serverOk = statuses.every((s) => s.ok);
 
   // ── log channel ──
   const settings = await guildSettingsService.get(guildId);
@@ -111,24 +78,20 @@ export async function execute(
   });
 }
 
-/**
- * The bot can only ban/kick/timeout members whose highest role is *below* its
- * own. List any roles above the bot so the admin can see who's out of reach.
- */
 function checkHierarchy(guild: Guild, me: GuildMember): string {
-  const botTop = me.roles.highest;
-  const above = [...guild.roles.cache.values()]
-    .filter((role) => role.comparePositionTo(botTop) > 0)
-    .sort((a, b) => b.position - a.position);
+  const above = diagnosticsService.rolesAboveBot(
+    me.roles.highest.position,
+    [...guild.roles.cache.values()].map((r) => ({ id: r.id, position: r.position }))
+  );
 
   if (above.length === 0) {
-    return `✅ Bot's top role (${botTop}) is above all others — it can action any non-owner member.`;
+    return `✅ Bot's top role (${me.roles.highest}) is above all others — it can action any non-owner member.`;
   }
 
-  const shown = above.slice(0, MAX_LISTED).map((role) => `<@&${role.id}>`).join(", ");
+  const shown = above.slice(0, MAX_LISTED).map((r) => `<@&${r.id}>`).join(", ");
   const more = above.length > MAX_LISTED ? ` …and ${above.length - MAX_LISTED} more` : "";
   return (
-    `⚠️ ${above.length} role(s) sit above the bot's top role (${botTop}). ` +
+    `⚠️ ${above.length} role(s) sit above the bot's top role (${me.roles.highest}). ` +
     `Members whose highest role is one of these can't be banned/kicked/timed out — ` +
     `move the bot's role higher to cover them: ${shown}${more}`
   );
@@ -148,7 +111,7 @@ function checkLogChannel(
     return { text: `❌ <#${logChannelId}> is set but I can't see it (deleted or no access).`, ok: false };
   }
 
-  const missing = missingNames(channel, me, LOG_CHANNEL_PERMS);
+  const missing = diagnosticsService.missingLogChannelPerms(channel.permissionsFor(me));
   return missing.length === 0
     ? { text: `✅ <#${logChannelId}> — can post here.`, ok: true }
     : { text: `❌ <#${logChannelId}> — missing: ${missing.join(", ")}`, ok: false };
@@ -170,7 +133,7 @@ function checkHoneypots(
       problems.push(`❌ <#${id}> — channel missing (deleted?)`);
       continue;
     }
-    const missing = missingNames(channel, me, HONEYPOT_CHANNEL_PERMS);
+    const missing = diagnosticsService.missingHoneypotChannelPerms(channel.permissionsFor(me));
     if (missing.length > 0) problems.push(`❌ <#${id}> — missing: ${missing.join(", ")}`);
   }
 
@@ -181,14 +144,4 @@ function checkHoneypots(
   const shown = problems.slice(0, MAX_LISTED).join("\n");
   const more = problems.length > MAX_LISTED ? `\n…and ${problems.length - MAX_LISTED} more` : "";
   return { text: shown + more, ok: false };
-}
-
-/** Names of the given perms the bot lacks in a specific channel. */
-function missingNames(
-  channel: GuildBasedChannel,
-  me: GuildMember,
-  perms: Perm[]
-): string[] {
-  const here = channel.permissionsFor(me);
-  return perms.filter((p) => !here?.has(p.flag)).map((p) => p.name);
 }
