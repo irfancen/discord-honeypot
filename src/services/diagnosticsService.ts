@@ -1,8 +1,5 @@
 import { PermissionFlagsBits, type PermissionsBitField } from "discord.js";
 
-// Pure diagnostics logic: takes permission bitfields / role positions and returns
-// structured results. No Discord I/O, so it's unit-testable without a client —
-// the command does the discord.js extraction and the formatting.
 
 export interface PermStatus {
   name: string;

@@ -39,8 +39,6 @@ export interface ActionFailure {
 export const hitNotificationService = {
   /**
    * Post a honeypot-hit notification to the guild's configured log channel.
-   * Best-effort: never throws back into the action flow.
-   *
    * `attachmentNames` are display-only (captured before the message was deleted).
    */
   async postHit(
@@ -51,11 +49,7 @@ export const hitNotificationService = {
     await sendToLogChannel(client, hit.guildId, buildHitEmbed(hit, attachmentNames));
   },
 
-  /**
-   * Alert the log channel that a honeypot fired but the bot couldn't action the
-   * user (e.g. a compromised account that outranks the bot) — the case a human
-   * most needs to know about. Best-effort, like postHit.
-   */
+  /** Alert the log channel that a honeypot fired but the bot couldn't action the user. */
   async postActionFailed(
     client: Client,
     failure: ActionFailure,
@@ -147,11 +141,6 @@ function addAttachments(embed: EmbedBuilder, attachmentNames: string[]): void {
   }
 }
 
-/**
- * Render captured message content for the embed. Markdown is escaped so the
- * spammer's formatting renders inert and literal — critically `maskedLink`,
- * which keeps `[Free Nitro](https://scam)` un-clickable in front of moderators.
- */
 function formatContent(raw: string | null): string {
   const text = raw?.trim();
   if (!text) return "*(no content)*";
@@ -159,7 +148,6 @@ function formatContent(raw: string | null): string {
   return truncate(escapeMarkdown(text, { maskedLink: true }), MAX_CONTENT_LENGTH);
 }
 
-/** Filenames are attacker-controlled, so escape them too before display. */
 function formatAttachments(names: string[]): string {
   const list = names.map((name) => `📎 ${escapeMarkdown(name)}`).join("\n");
   return truncate(list, MAX_CONTENT_LENGTH);

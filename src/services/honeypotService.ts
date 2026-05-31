@@ -12,12 +12,7 @@ import {
 
 const BULK_DELETE_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 const FETCH_PAGE_SIZE = 100;
-// Channels are purged in parallel batches of this size. Bounded so a guild near
-// Discord's 500-channel ceiling doesn't run strictly serially (~1-2 min), while
-// not bursting all 500 at once (discord.js queues rate limits regardless).
 const PURGE_CONCURRENCY = 10;
-// Perms the bot needs in a channel to purge it; channels lacking any are skipped
-// up front (no point firing a fetch that 401s on a channel we can't read/delete).
 const PURGE_PERMS = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.ReadMessageHistory,
@@ -70,8 +65,7 @@ export const honeypotService = {
     }`;
     const actioned = await executeAction(member, resolved, reason);
     if (!actioned) {
-      // Couldn't action (e.g. a hacked account that outranks the bot) — the spam
-      // is already deleted, but a human needs to step in, so alert the log channel.
+      // Alert the log channel when the action could not be performed.
       await hitNotificationService.postActionFailed(
         message.client,
         {
@@ -130,11 +124,7 @@ function isExempt(member: GuildMember, resolved: ResolvedChannelSettings): boole
   return false;
 }
 
-/**
- * Execute the configured action. Returns false (and logs) when the bot can't
- * action the target — role hierarchy, ownership, or missing permission — so the
- * caller skips recording a hit that didn't actually happen.
- */
+/** Execute the configured action. Returns false when the bot can't action the target. */
 async function executeAction(
   member: GuildMember,
   resolved: ResolvedChannelSettings,
@@ -210,8 +200,7 @@ async function purgeRecentMessages(
   const windowSeconds = Math.min(seconds, BULK_DELETE_MAX_AGE_SECONDS);
   const cutoff = Date.now() - windowSeconds * 1000;
 
-  // Only channels the bot can actually read and delete in — skip the rest
-  // silently rather than firing fetches that fail with Missing Access.
+  // Only channels the bot can actually read and delete in.
   const me = guild.members.me;
   const channels = [
     ...guild.channels.cache.filter((channel) => channel.isTextBased()).values(),

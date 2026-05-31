@@ -48,7 +48,6 @@ export const pendingDefaults = {
 };
 
 // ── confirmation button customIds ──────────────────────────────────
-
 const PREFIX = "config_defaults";
 const CONFIRM_ACTIONS = ["adopt", "keep", "cancel"] as const;
 export type ConfirmAction = (typeof CONFIRM_ACTIONS)[number];
@@ -57,7 +56,6 @@ export function buildCustomId(id: string, action: ConfirmAction): string {
   return `${PREFIX}:${id}:${action}`;
 }
 
-/** Parse one of our confirmation customIds, or null if it isn't ours. */
 export function parseCustomId(
   customId: string
 ): { id: string; action: ConfirmAction } | null {

@@ -1,7 +1,6 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import { prettify } from "../utils/format.js";
 
-// Shared slash-command option values/parsing for the inherit-choice pattern.
 
 // Maps a setting choice back to NULL (inherit the next level).
 export const INHERIT = "inherit";
@@ -9,7 +8,6 @@ export const INHERIT = "inherit";
 export const NONE = "none";
 export const SET = "set";
 
-// Shown when "Set to roles below" is chosen but no role mention can be parsed.
 export const BYPASS_HELP =
   "To set bypass roles, choose `Set to roles below` and `@`-mention at least " +
   "one role in the `roles` option.";

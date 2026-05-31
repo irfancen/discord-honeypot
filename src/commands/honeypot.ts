@@ -319,7 +319,6 @@ function formatRanked(entries: { mention: string; count: number }[]): string {
 }
 
 // ── option building ────────────────────────────────────────────────
-
 /** Adds the four shared setting options (each with an Inherit choice). */
 function withSettingOptions(
   sub: SlashCommandSubcommandBuilder
@@ -376,7 +375,6 @@ function withSettingOptions(
 }
 
 // ── option parsing ─────────────────────────────────────────────────
-
 function readOverrides(
   interaction: ChatInputCommandInteraction
 ): HoneypotOverrides {
@@ -421,7 +419,6 @@ function readBypassRoles(
 }
 
 // ── display ────────────────────────────────────────────────────────
-
 function formatResolved(r: ResolvedChannelSettings): string {
   return [
     `• **Action:** ${describeAction(r)}`,

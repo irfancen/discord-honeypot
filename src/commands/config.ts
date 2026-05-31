@@ -210,7 +210,6 @@ async function handleDefaults(
 }
 
 // ── option parsing ─────────────────────────────────────────────────
-
 function readDefaultsChange(
   interaction: ChatInputCommandInteraction
 ): DefaultsChange | "invalid_bypass" {
@@ -264,7 +263,6 @@ function isEmptyChange(change: DefaultsChange): boolean {
 }
 
 // ── display ────────────────────────────────────────────────────────
-
 function formatLogChannel(settings: GuildSettings | null): string {
   return settings?.logChannelId
     ? `<#${settings.logChannelId}>`
@@ -278,8 +276,6 @@ function formatDefaults(settings: GuildSettings | null): string {
     `• **Delete history:** ${shownDefault(settings?.defaultDeleteMessageSeconds ?? null, HARDCODED_DEFAULTS.deleteMessageSeconds, humanizeSeconds)}`,
     `• **Timeout duration:** ${shownDefault(settings?.defaultTimeoutSeconds ?? null, HARDCODED_DEFAULTS.timeoutSeconds, humanizeSeconds)}`,
     `• **Exempt admins:** ${shownDefault(settings?.defaultExemptAdmins ?? null, HARDCODED_DEFAULTS.exemptAdmins, yesNo)}`,
-    // Guild bypass has no level above it but the hardcoded empty list, so an
-    // empty list is simply "None" rather than a built-in fallback.
     `• **Bypass roles:** ${formatRoleList(bypassRoleIds)}`,
   ].join("\n");
 }

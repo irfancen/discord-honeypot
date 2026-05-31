@@ -16,9 +16,6 @@ export const DELETE_PRESETS = {
 export type DeletePreset = keyof typeof DELETE_PRESETS;
 export type DeletePresetOrInherit = DeletePreset | "inherit";
 
-// Durations (in seconds) the `timeout` action can use. Mirrors Discord's own
-// client UI options, which cap at one week — even though the API permits up to
-// 28 days (see MAX_TIMEOUT_SECONDS, enforced in honeypotService).
 export const TIMEOUT_PRESETS = {
   one_minute: 60,
   five_minutes: 300,
@@ -65,12 +62,6 @@ export interface GuildSettings {
   defaultBypassRoleIds: string[];
 }
 
-/**
- * The resolved action plus any parameter that belongs to it. Only `timeout`
- * carries a parameter (its duration), so the duration — and its own resolution
- * source — live here rather than polluting the flat settings object. `kind`'s
- * source (which level chose the action) is tracked separately in `source.action`.
- */
 export type ResolvedAction =
   | { kind: "ban" }
   | { kind: "kick" }

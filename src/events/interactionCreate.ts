@@ -60,8 +60,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     return;
   }
 
-  // The confirmation is ephemeral (only the initiator sees it), but gate on the
-  // initiator anyway as defense in depth.
+  // The confirmation is ephemeral , but gate on the initiator anyway as defense in depth.
   if (interaction.user.id !== pending.userId) {
     await interaction.reply({
       content: "Only the admin who started this change can confirm it.",
