@@ -8,6 +8,8 @@ against the attacker. You designate one or more **honeypot channels** — channe
 a real member would never post in — and any account that posts there is
 automatically removed before it can spam the rest of your server.
 
+[![Add to your server](https://img.shields.io/badge/Add%20to%20your%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1509592803401924678)
+
 ## How it works
 
 1. An admin marks a channel as a honeypot (e.g. a hidden `#do-not-post` channel,
