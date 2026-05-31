@@ -11,6 +11,7 @@ import {
   DELETE_PRESETS,
   TIMEOUT_PRESETS,
   type DeletePreset,
+  type HoneypotHit,
   type ResolvedChannelSettings,
   type SettingSource,
   type TimeoutPreset,
@@ -32,6 +33,10 @@ import {
   type BypassRolesUpdate,
   type HoneypotOverrides,
 } from "../services/honeypotChannelService.js";
+import { honeypotHitService } from "../services/honeypotHitService.js";
+
+// How many recent hits /honeypot hits shows.
+const HITS_LIMIT = 10;
 
 export const data = new SlashCommandBuilder()
   .setName("honeypot")
@@ -86,6 +91,26 @@ export const data = new SlashCommandBuilder()
           .setName("visible")
           .setDescription("Post for other admins to see (default: only you; reveals honeypot channels)")
       )
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("hits")
+      .setDescription("Show recent honeypot hits")
+      .addBooleanOption((o) =>
+        o
+          .setName("visible")
+          .setDescription("Post for other admins to see (default: only you; reveals honeypot channels)")
+      )
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("stats")
+      .setDescription("Show honeypot activity stats (totals, top offenders, top channels)")
+      .addBooleanOption((o) =>
+        o
+          .setName("visible")
+          .setDescription("Post for other admins to see (default: only you; reveals honeypot channels)")
+      )
   );
 
 export async function execute(
@@ -106,6 +131,10 @@ export async function execute(
       return handleConfig(interaction, guildId);
     case "list":
       return handleList(interaction, guildId);
+    case "hits":
+      return handleHits(interaction, guildId);
+    case "stats":
+      return handleStats(interaction, guildId);
   }
 }
 
@@ -213,12 +242,80 @@ async function handleList(
     .setColor(0xf1c40f)
     .setDescription(description.slice(0, 4096));
 
-  const visible = interaction.options.getBoolean("visible") ?? false;
-  await interaction.reply({
-    embeds: [embed],
-    flags: visible ? undefined : MessageFlags.Ephemeral,
-    allowedMentions: { parse: [] },
-  });
+  await replyEmbed(interaction, embed);
+}
+
+async function handleHits(
+  interaction: ChatInputCommandInteraction,
+  guildId: string
+): Promise<void> {
+  const { hits, total } = await honeypotHitService.getHits(guildId, HITS_LIMIT);
+
+  if (hits.length === 0) {
+    await reply(interaction, "No honeypot hits recorded yet.");
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("🍯 Recent honeypot hits")
+    .setColor(0xf1c40f)
+    .setDescription(hits.map(formatHit).join("\n"))
+    .setFooter({
+      text: `${total} total hit(s) in this server${
+        hits.length < total ? ` · showing the latest ${hits.length}` : ""
+      }`,
+    });
+
+  await replyEmbed(interaction, embed);
+}
+
+async function handleStats(
+  interaction: ChatInputCommandInteraction,
+  guildId: string
+): Promise<void> {
+  const stats = await honeypotHitService.getStats(guildId);
+
+  if (stats.total === 0) {
+    await reply(interaction, "No honeypot hits recorded yet.");
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("📊 Honeypot stats")
+    .setColor(0xf1c40f)
+    .addFields(
+      {
+        name: "Total",
+        value: `${stats.total} hit(s) · ${stats.recent} in the last 7 days`,
+      },
+      {
+        name: "By action",
+        value: `🔨 Ban ${stats.byAction.ban} · ⏱️ Timeout ${stats.byAction.timeout} · 👢 Kick ${stats.byAction.kick}`,
+      },
+      {
+        name: "Top offenders",
+        value: formatRanked(stats.topUsers.map((u) => ({ mention: `<@${u.userId}>`, count: u.count }))),
+      },
+      {
+        name: "Most-triggered honeypots",
+        value: formatRanked(stats.topChannels.map((c) => ({ mention: `<#${c.channelId}>`, count: c.count }))),
+      }
+    );
+
+  await replyEmbed(interaction, embed);
+}
+
+/** One line per hit: relative time · user · channel · action. */
+function formatHit(hit: HoneypotHit): string {
+  const when = `<t:${Math.floor(hit.hitAt.getTime() / 1000)}:R>`;
+  return `${when} — <@${hit.userId}> in <#${hit.channelId}> — **${prettify(hit.actionTaken)}**`;
+}
+
+/** Numbered "1. <mention> — N" list. */
+function formatRanked(entries: { mention: string; count: number }[]): string {
+  return entries
+    .map((e, i) => `${i + 1}. ${e.mention} — ${e.count}`)
+    .join("\n");
 }
 
 // ── option building ────────────────────────────────────────────────
@@ -358,6 +455,19 @@ function reply(
   return interaction.reply({
     content,
     flags: MessageFlags.Ephemeral,
+    allowedMentions: { parse: [] },
+  });
+}
+
+/** Reply with an embed, honoring the `visible` option (default ephemeral). */
+function replyEmbed(
+  interaction: ChatInputCommandInteraction,
+  embed: EmbedBuilder
+): Promise<unknown> {
+  const visible = interaction.options.getBoolean("visible") ?? false;
+  return interaction.reply({
+    embeds: [embed],
+    flags: visible ? undefined : MessageFlags.Ephemeral,
     allowedMentions: { parse: [] },
   });
 }
