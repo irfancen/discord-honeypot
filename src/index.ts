@@ -4,6 +4,8 @@ import { loadCommands } from "./handlers/commandHandler.js";
 import { loadEvents } from "./handlers/eventHandler.js";
 import type { BotClient } from "./types/client.js";
 import type { Command } from "./types/command.js";
+import { logger } from "./lib/logger.js";
+import { closeDatabase } from "./database/client.js";
 
 const client = new Client({
   intents: [
@@ -25,6 +27,23 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Failed to start bot:", error);
+  logger.fatal({ err: error }, "Failed to start bot.");
   process.exit(1);
 });
+
+/** Disconnect from Discord and close the DB pool on shutdown. */
+async function shutdown(signal: NodeJS.Signals): Promise<void> {
+  logger.info({ signal }, "Shutting down…");
+  try {
+    await client.destroy();
+    await closeDatabase();
+  } catch (error) {
+    logger.error({ err: error }, "Error during shutdown.");
+  } finally {
+    process.exit(0);
+  }
+}
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => void shutdown(signal));
+}

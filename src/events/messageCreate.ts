@@ -1,6 +1,9 @@
 import { Events } from "discord.js";
 import type { Event } from "../types/event.js";
 import { honeypotService } from "../services/honeypotService.js";
+import { createLogger } from "../lib/logger.js";
+
+const log = createLogger("messageCreate");
 
 /**
  * Fires for every message. Delegates to honeypotService, which short-circuits
@@ -13,7 +16,7 @@ const event: Event<typeof Events.MessageCreate> = {
     try {
       await honeypotService.handleMessage(message);
     } catch (error) {
-      console.error("[messageCreate] Error handling message:", error);
+      log.error({ err: error }, "Error handling message.");
     }
   },
 };

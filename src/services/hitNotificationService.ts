@@ -8,6 +8,9 @@ import {
 import type { Action, HoneypotHit } from "../types/honeypot.js";
 import { guildSettingsRepository } from "../database/repositories/guildSettingsRepository.js";
 import { prettify } from "../utils/format.js";
+import { createLogger } from "../lib/logger.js";
+
+const log = createLogger("hitNotification");
 
 const ACTION_LABEL: Record<Action, string> = {
   ban: "Banned",
@@ -77,8 +80,9 @@ async function sendToLogChannel(
 
   const channel = await resolveSendableChannel(client, guildSettings.logChannelId);
   if (!channel) {
-    console.warn(
-      `[hitNotification] Log channel ${guildSettings.logChannelId} for guild ${guildId} is missing or not sendable; skipping.`
+    log.warn(
+      { logChannelId: guildSettings.logChannelId, guildId },
+      "Log channel is missing or not sendable; skipping."
     );
     return;
   }
@@ -86,9 +90,9 @@ async function sendToLogChannel(
   try {
     await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   } catch (error) {
-    console.warn(
-      `[hitNotification] Failed to post to channel ${guildSettings.logChannelId} in guild ${guildId}:`,
-      error
+    log.warn(
+      { err: error, logChannelId: guildSettings.logChannelId, guildId },
+      "Failed to post to log channel."
     );
   }
 }

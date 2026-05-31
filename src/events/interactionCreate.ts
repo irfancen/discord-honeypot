@@ -7,6 +7,9 @@ import {
 import type { Event } from "../types/event.js";
 import { guildSettingsService } from "../services/guildSettingsService.js";
 import { pendingDefaults, parseCustomId } from "../services/pendingDefaults.js";
+import { createLogger } from "../lib/logger.js";
+
+const log = createLogger("interaction");
 
 const event: Event<typeof Events.InteractionCreate> = {
   name: Events.InteractionCreate,
@@ -20,14 +23,14 @@ const event: Event<typeof Events.InteractionCreate> = {
 
     const command = client.commands.get(interaction.commandName);
     if (!command) {
-      console.warn(`Unknown command: ${interaction.commandName}`);
+      log.warn({ command: interaction.commandName }, "Unknown command.");
       return;
     }
 
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(`Error executing /${interaction.commandName}:`, error);
+      log.error({ err: error, command: interaction.commandName }, "Error executing command.");
 
       const errorReply: InteractionReplyOptions = {
         content: "Something went wrong while running this command.",
@@ -94,7 +97,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         break;
     }
   } catch (error) {
-    console.error("Error applying config defaults confirmation:", error);
+    log.error({ err: error }, "Error applying config defaults confirmation.");
     await interaction.update({
       content: "Something went wrong applying the change. Please try again.",
       components: [],

@@ -27,6 +27,9 @@ import { honeypotChannelRepository } from "../database/repositories/honeypotChan
 import { honeypotHitRepository } from "../database/repositories/honeypotHitRepository.js";
 import { settingsService } from "./settingsService.js";
 import { hitNotificationService } from "./hitNotificationService.js";
+import { createLogger } from "../lib/logger.js";
+
+const log = createLogger("honeypot");
 
 export const honeypotService = {
   /**
@@ -47,8 +50,9 @@ export const honeypotService = {
 
     const member = message.member ?? (await fetchMember(message));
     if (!member) {
-      console.warn(
-        `[honeypot] Could not resolve member ${message.author.id} in guild ${guildId}; skipping.`
+      log.warn(
+        { userId: message.author.id, guildId },
+        "Could not resolve member; skipping."
       );
       return;
     }
@@ -159,18 +163,18 @@ async function executeAction(
         return true;
     }
   } catch (error) {
-    console.warn(
-      `[honeypot] Failed to ${action.kind} member ${member.id} in guild ${member.guild.id}:`,
-      error
+    log.warn(
+      { err: error, action: action.kind, userId: member.id, guildId: member.guild.id },
+      "Failed to action member."
     );
     return false;
   }
 }
 
 function logUnactionable(member: GuildMember, action: Action): false {
-  console.warn(
-    `[honeypot] Cannot ${action} member ${member.id} in guild ${member.guild.id} ` +
-      `(role hierarchy, ownership, or missing permission). Manual review needed.`
+  log.warn(
+    { action, userId: member.id, guildId: member.guild.id },
+    "Cannot action member (role hierarchy, ownership, or missing permission). Manual review needed."
   );
   return false;
 }
@@ -187,7 +191,7 @@ async function safeDeleteMessage(message: Message): Promise<void> {
   try {
     await message.delete();
   } catch (error) {
-    console.warn(`[honeypot] Failed to delete message ${message.id}:`, error);
+    log.warn({ err: error, messageId: message.id }, "Failed to delete message.");
   }
 }
 
@@ -228,9 +232,9 @@ async function purgeRecentMessages(
             await channel.bulkDelete(offenders, true);
           }
         } catch (error) {
-          console.warn(
-            `[honeypot] Purge skipped channel ${channel.id} in guild ${guild.id}:`,
-            error
+          log.warn(
+            { err: error, channelId: channel.id, guildId: guild.id },
+            "Purge skipped channel."
           );
         }
       })
